@@ -126,6 +126,7 @@ func (w *FileLogWriter) Rotate() {
 
 // If this is called in a threaded context, it MUST be synchronized
 func (w *FileLogWriter) intRotate() error {
+	now := time.Now()
 	// Close any log file that may be open
 	if w.file != nil {
 		fmt.Fprint(w.file, FormatLogRecord(w.trailer, &LogRecord{Created: time.Now()}))
@@ -140,7 +141,9 @@ func (w *FileLogWriter) intRotate() error {
 			num := 1
 			fname := ""
 			for ; err == nil && num <= 999; num++ {
-				fname = w.filename + fmt.Sprintf(".%03d", num)
+
+				date := fmt.Sprintf("%d-%d-%d", now.Year(), now.Month(), now.Day())
+				fname = w.filename + fmt.Sprintf("-%s.%03d", date, num)
 				_, err = os.Lstat(fname)
 			}
 			// return error if the last file checked still existed
@@ -163,7 +166,6 @@ func (w *FileLogWriter) intRotate() error {
 	}
 	w.file = fd
 
-	now := time.Now()
 	fmt.Fprint(w.file, FormatLogRecord(w.header, &LogRecord{Created: now}))
 
 	// Set the daily open date to the current date

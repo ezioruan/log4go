@@ -29,7 +29,11 @@ func (w ConsoleLogWriter) run(out io.Writer) {
 		if at := rec.Created.UnixNano() / 1e9; at != timestrAt {
 			timestr, timestrAt = rec.Created.Format("2006/01/02 15:04:05"), at
 		}
-		fmt.Fprint(out, "[", timestr, "] [", levelStrings[rec.Level], "] ", rec.Message, "\n")
+		fmt.Fprintf(out, "[%s] [%s] [%s] [%s]\n",
+			timestr,
+			levelStrings[rec.Level],
+			rec.Source,
+			rec.Message)
 	}
 }
 
