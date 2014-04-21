@@ -5,11 +5,14 @@ package log4go
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
 // This log writer sends output to a file
 type FileLogWriter struct {
+	mu sync.Mutex
+
 	rec chan *LogRecord
 	rot chan bool
 
@@ -126,6 +129,8 @@ func (w *FileLogWriter) Rotate() {
 
 // If this is called in a threaded context, it MUST be synchronized
 func (w *FileLogWriter) intRotate() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	now := time.Now()
 	// Close any log file that may be open
 	if w.file != nil {
@@ -137,24 +142,36 @@ func (w *FileLogWriter) intRotate() error {
 	if w.rotate {
 		_, err := os.Lstat(w.filename)
 		if err == nil { // file exists
-			// Find the next available number
-			num := 1
-			fname := ""
-			for ; err == nil && num <= 999; num++ {
 
-				date := fmt.Sprintf("%d-%d-%d", now.Year(), now.Month(), now.Day())
-				fname = w.filename + fmt.Sprintf("-%s.%03d", date, num)
-				_, err = os.Lstat(fname)
+			var fname string
+			if w.daily {
+				yestday := now.AddDate(0, 0, -1)
+				date := fmt.Sprintf("%d-%d-%d", yestday.Year(), yestday.Month(), yestday.Day())
+				fname = fmt.Sprintf("%s-%s", w.filename, date)
+			} else if w.maxsize > 0 || w.maxlines > 0 {
+
+				// Find the next available number
+				num := 1
+				for ; err == nil && num <= 999; num++ {
+
+					fname = fmt.Sprintf("%s-%03d", w.filename, num)
+
+					if _, err = os.Lstat(fname); err != nil {
+						break
+					}
+				}
+				if err == nil {
+					return fmt.Errorf("Rotate: Cannot find free log number to rename %s\n", w.filename)
+				}
 			}
 			// return error if the last file checked still existed
-			if err == nil {
-				return fmt.Errorf("Rotate: Cannot find free log number to rename %s\n", w.filename)
-			}
 
 			// Rename the file to its newfound home
-			err = os.Rename(w.filename, fname)
-			if err != nil {
-				return fmt.Errorf("Rotate: %s\n", err)
+			if fname != "" {
+				err = os.Rename(w.filename, fname)
+				if err != nil {
+					return fmt.Errorf("Rotate: %s to %s  error: %s\n", w.filename, fname, err)
+				}
 			}
 		}
 	}
