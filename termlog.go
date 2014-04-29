@@ -7,9 +7,39 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/aybabtme/color/brush"
 )
 
 var stdout io.Writer = os.Stdout
+
+//Color the level string
+type colorLevelString string
+
+func (c colorLevelString) String() (str string) {
+	switch c {
+	case "FNST":
+		str = fmt.Sprintf("%s", brush.DarkGreen(c))
+	case "FINE":
+		str = fmt.Sprintf("%s", brush.Green(c))
+	case "DEBG":
+		str = fmt.Sprintf("%s", brush.Purple(c))
+	case "TRAC":
+		str = fmt.Sprintf("%s", brush.LightGray(c))
+	case "INFO":
+		str = fmt.Sprintf("%s", brush.Blue(c))
+	case "WARN":
+		str = fmt.Sprintf("%s", brush.Yellow(c))
+	case "EROR":
+		str = fmt.Sprintf("%s", brush.Red(c))
+	case "CRIT":
+		str = fmt.Sprintf("%s", brush.DarkRed(c))
+	default:
+		str = string(c)
+	}
+	return
+
+}
 
 // This is the standard writer that prints to standard output.
 type ConsoleLogWriter chan *LogRecord
@@ -31,7 +61,7 @@ func (w ConsoleLogWriter) run(out io.Writer) {
 		}
 		fmt.Fprintf(out, "[%s] [%s] (%s) %s\n",
 			timestr,
-			levelStrings[rec.Level],
+			colorLevelString(levelStrings[rec.Level]),
 			rec.Source,
 			rec.Message)
 	}
