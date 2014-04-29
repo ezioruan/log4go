@@ -62,8 +62,9 @@ func (w ConsoleLogWriter) run(out io.Writer) {
 		fmt.Fprintf(out, "[%s] [%s] (%s) %s\n",
 			timestr,
 			colorLevelString(levelStrings[rec.Level]),
-			rec.Source,
-			rec.Message)
+			fmt.Sprintf("%s", brush.LightGray(rec.Source)),
+			fmt.Sprintf("%s", brush.DarkBlue(rec.Message)),
+		)
 	}
 }
 
